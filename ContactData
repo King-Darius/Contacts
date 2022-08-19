@@ -1,0 +1,191 @@
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+from tkinter import filedialog
+import os
+import csv
+
+class Contacts(tk.Tk):
+    def __init__(self, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
+        self.title("Contacts")
+        self.geometry("500x500")
+        self.resizable(False, False)
+        self.contacts = []
+        self.contacts_tree = ttk.Treeview(self, columns=("Name", "Phone", "Email"))
+        self.contacts_tree.heading("#0", text="ID")
+        self.contacts_tree.heading("Name", text="Name")
+        self.contacts_tree.heading("Phone", text="Phone")
+        self.contacts_tree.heading("Email", text="Email")
+        self.contacts_tree.column("#0", width=50)
+        self.contacts_tree.column("Name", width=150)
+        self.contacts_tree.column("Phone", width=150)
+        self.contacts_tree.column("Email", width=150)
+        self.contacts_tree.pack(side="left", fill="both", expand=True)
+        self.contacts_tree.bind("<Double-1>", self.on_select)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.contacts_tree.yview)
+        self.scrollbar.pack(side="right", fill="y")
+        self.contacts_tree.configure(yscrollcommand=self.scrollbar.set)
+        self.menu = tk.Menu(self)
+        self.config(menu=self.menu)
+        self.file_menu = tk.Menu(self.menu, tearoff=0)
+        self.file_menu.add_command(label="New", command=self.new_contact)
+        self.file_menu.add_command(label="Open", command=self.open_contacts)
+        self.file_menu.add_command(label="Save", command=self.save_contacts)
+        self.file_menu.add_command(label="Save As", command=self.save_as_contacts)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.exit)
+        self.menu.add_cascade(label="File", menu=self.file_menu)
+        self.edit_menu = tk.Menu(self.menu, tearoff=0)
+        self.edit_menu.add_command(label="Edit", command=self.edit_contact)
+        self.edit_menu.add_command(label="Delete", command=self.delete_contact)
+        self.menu.add_cascade(label="Edit", menu=self.edit_menu)
+        self.help_menu = tk.Menu(self.menu, tearoff=0)
+        self.help_menu.add_command(label="About", command=self.about)
+        self.menu.add_cascade(label="Help", menu=self.help_menu)
+
+    def new_contact(self):
+        self.new_contact_window = tk.Toplevel(self)
+        self.new_contact_window.title("New Contact")
+        self.new_contact_window.geometry("300x300")
+        self.new_contact_window.resizable(False, False)
+        self.new_contact_window.grab_set()
+        self.new_contact_window.focus_set()
+        self.new_contact_window.transient(self)
+        self.new_contact_window.protocol("WM_DELETE_WINDOW", self.new_contact_window.destroy)
+        self.name_label = ttk.Label(self.new_contact_window, text="Name:")
+        self.name_label.pack()
+        self.name_entry = ttk.Entry(self.new_contact_window)
+        self.name_entry.pack()
+        self.phone_label = ttk.Label(self.new_contact_window, text="Phone:")
+        self.phone_label.pack()
+        self.phone_entry = ttk.Entry(self.new_contact_window)
+        self.phone_entry.pack()
+        self.email_label = ttk.Label(self.new_contact_window, text="Email:")
+        self.email_label.pack()
+        self.email_entry = ttk.Entry(self.new_contact_window)
+        self.email_entry.pack()
+        self.add_button = ttk.Button(self.new_contact_window, text="Add", command=self.add_contact)
+        self.add_button.pack()
+
+    def add_contact(self):
+        name = self.name_entry.get()
+        phone = self.phone_entry.get()
+        email = self.email_entry.get()
+        if name == "" or phone == "" or email == "":
+            messagebox.showerror("Error", "Please fill in all fields.")
+        else:
+            self.contacts.append([name, phone, email])
+            self.contacts_tree.insert("", "end", text=str(len(self.contacts)), values=(name, phone, email))
+            self.new_contact_window.destroy()
+
+    def open_contacts(self):
+        self.open_contacts_window = tk.Toplevel(self)
+        self.open_contacts_window.title("Open Contacts")
+        self.open_contacts_window.geometry("300x300")
+        self.open_contacts_window.resizable(False, False)
+        self.open_contacts_window.grab_set()
+        self.open_contacts_window.focus_set()
+        self.open_contacts_window.transient(self)
+        self.open_contacts_window.protocol("WM_DELETE_WINDOW", self.open_contacts_window.destroy)
+        self.open_contacts_button = ttk.Button(self.open_contacts_window, text="Open", command=self.open_contacts_file)
+        self.open_contacts_button.pack()
+
+    def open_contacts_file(self):
+        self.contacts_tree.delete(*self.contacts_tree.get_children())
+        self.contacts = []
+        self.file_name = filedialog.askopenfilename(initialdir=os.getcwd(), title="Select file", filetypes=(("CSV files", "*.csv"), ("all files", "*.*")))
+        with open(self.file_name, "r") as file:
+            reader = csv.reader(file)
+            for row in reader:
+                self.contacts.append(row)
+                self.contacts_tree.insert("", "end", text=str(len(self.contacts)), values=(row[0], row[1], row[2]))
+        self.open_contacts_window.destroy()
+
+    def save_contacts(self):
+        if self.file_name == "":
+            self.save_as_contacts()
+        else:
+            with open(self.file_name, "w") as file:
+                writer = csv.writer(file)
+                writer.writerows(self.contacts)
+
+    def save_as_contacts(self):
+        self.save_as_contacts_window = tk.Toplevel(self)
+        self.save_as_contacts_window.title("Save As")
+        self.save_as_contacts_window.geometry("300x300")
+        self.save_as_contacts_window.resizable(False, False)
+        self.save_as_contacts_window.grab_set()
+        self.save_as_contacts_window.focus_set()
+        self.save_as_contacts_window.transient(self)
+        self.save_as_contacts_window.protocol("WM_DELETE_WINDOW", self.save_as_contacts_window.destroy)
+        self.save_as_contacts_button = ttk.Button(self.save_as_contacts_window, text="Save As", command=self.save_as_contacts_file)
+        self.save_as_contacts_button.pack()
+
+    def save_as_contacts_file(self):
+        self.file_name = filedialog.asksaveasfilename(initialdir=os.getcwd(), title="Select file", filetypes=(("CSV files", "*.csv"), ("all files", "*.*")))
+        with open(self.file_name, "w") as file:
+            writer = csv.writer(file)
+            writer.writerows(self.contacts)
+        self.save_as_contacts_window.destroy()
+
+    def exit(self):
+        self.destroy()
+
+    def on_select(self, event):
+        self.selected_item = self.contacts_tree.selection()[0]
+        self.selected_item_id = self.contacts_tree.item(self.selected_item, "text")
+        self.selected_item_name = self.contacts_tree.item(self.selected_item, "values")[0]
+        self.selected_item_phone = self.contacts_tree.item(self.selected_item, "values")[1]
+        self.selected_item_email = self.contacts_tree.item(self.selected_item, "values")[2]
+
+    def edit_contact(self):
+        self.edit_contact_window = tk.Toplevel(self)
+        self.edit_contact_window.title("Edit Contact")
+        self.edit_contact_window.geometry("300x300")
+        self.edit_contact_window.resizable(False, False)
+        self.edit_contact_window.grab_set()
+        self.edit_contact_window.focus_set()
+        self.edit_contact_window.transient(self)
+        self.edit_contact_window.protocol("WM_DELETE_WINDOW", self.edit_contact_window.destroy)
+        self.name_label = ttk.Label(self.edit_contact_window, text="Name:")
+        self.name_label.pack()
+        self.name_entry = ttk.Entry(self.edit_contact_window)
+        self.name_entry.insert(0, self.selected_item_name)
+        self.name_entry.pack()
+        self.phone_label = ttk.Label(self.edit_contact_window, text="Phone:")
+        self.phone_label.pack()
+        self.phone_entry = ttk.Entry(self.edit_contact_window)
+        self.phone_entry.insert(0, self.selected_item_phone)
+        self.phone_entry.pack()
+        self.email_label = ttk.Label(self.edit_contact_window, text="Email:")
+        self.email_label.pack()
+        self.email_entry = ttk.Entry(self.edit_contact_window)
+        self.email_entry.insert(0, self.selected_item_email)
+        self.email_entry.pack()
+        self.edit_button = ttk.Button(self.edit_contact_window, text="Edit", command=self.edit_contact_button)
+        self.edit_button.pack()
+
+    def edit_contact_button(self):
+        name = self.name_entry.get()
+        phone = self.phone_entry.get()
+        email = self.email_entry.get()
+        if name == "" or phone == "" or email == "":
+            messagebox.showerror("Error", "Please fill in all fields.")
+        else:
+            self.contacts[int(self.selected_item_id) - 1] = [name, phone, email]
+            self.contacts_tree.item(self.selected_item, text=self.selected_item_id, values=(name, phone, email))
+            self.edit_contact_window.destroy()
+
+    def delete_contact(self):
+        self.contacts_tree.delete(self.selected_item)
+        self.contacts.pop(int(self.selected_item_id) - 1)
+        for i in range(int(self.selected_item_id), len(self.contacts) + 1):
+            self.contacts_tree.item(self.contacts_tree.get_children()[i - 1], text=str(i))
+
+    def about(self):
+        messagebox.showinfo("About", "N")
+
+if __name__ == "__main__":
+    app = Contacts()
+    app.mainloop()
